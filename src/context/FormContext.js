@@ -1,0 +1,71 @@
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createFormDefaults, createClienteDefault, createSolicitudDefault, createHerramientasDefault } from '../constants/formDefaults';
+
+const FormContext = createContext(null);
+
+export function FormProvider({ children }) {
+  const [formData, setFormData] = useState(createFormDefaults());
+
+  const update = useCallback((updates) => setFormData(p => ({ ...p, ...updates })), []);
+  const updateCoaching = useCallback((u) => setFormData(p => ({ ...p, coaching: { ...p.coaching, ...u } })), []);
+  const resetForm = useCallback(() => setFormData(createFormDefaults()), []);
+  const loadForm = useCallback((data) => setFormData(data), []);
+
+  // ── Clientes ──────────────────────────────────────────────────────────────
+  const addCliente = useCallback(() => setFormData(p => ({ ...p, clientes: [...p.clientes, createClienteDefault()] })), []);
+  const removeCliente = useCallback((i) => setFormData(p => { const a = [...p.clientes]; a.splice(i,1); return { ...p, clientes: a }; }), []);
+  const updateCliente = useCallback((i, u) => setFormData(p => {
+    const a = [...p.clientes]; a[i] = { ...a[i], ...u }; return { ...p, clientes: a };
+  }), []);
+  const toggleClientePasoVisita = useCallback((ci, pi) => setFormData(p => {
+    const a = [...p.clientes]; const pasos = [...a[ci].pasosVisita]; pasos[pi] = !pasos[pi]; a[ci] = { ...a[ci], pasosVisita: pasos }; return { ...p, clientes: a };
+  }), []);
+  const toggleClientePasoBusqueda = useCallback((ci, pi) => setFormData(p => {
+    const a = [...p.clientes]; const pasos = [...a[ci].pasosBusqueda]; pasos[pi] = !pasos[pi]; a[ci] = { ...a[ci], pasosBusqueda: pasos }; return { ...p, clientes: a };
+  }), []);
+
+  // ── Solicitudes ───────────────────────────────────────────────────────────
+  const addSolicitud = useCallback(() => setFormData(p => ({ ...p, solicitudes: [...p.solicitudes, createSolicitudDefault()] })), []);
+  const removeSolicitud = useCallback((i) => setFormData(p => { const a = [...p.solicitudes]; a.splice(i,1); return { ...p, solicitudes: a }; }), []);
+  const updateSolicitud = useCallback((i, u) => setFormData(p => {
+    const a = [...p.solicitudes]; a[i] = { ...a[i], ...u }; return { ...p, solicitudes: a };
+  }), []);
+  const toggleSolicitudPaso = useCallback((si, pi) => setFormData(p => {
+    const a = [...p.solicitudes]; const pasos = [...a[si].pasos]; pasos[pi] = !pasos[pi]; a[si] = { ...a[si], pasos }; return { ...p, solicitudes: a };
+  }), []);
+
+  // ── Herramientas ──────────────────────────────────────────────────────────
+  const addHerramientas = useCallback(() => setFormData(p => ({ ...p, herramientasSecs: [...p.herramientasSecs, createHerramientasDefault()] })), []);
+  const removeHerramientas = useCallback((i) => setFormData(p => { const a = [...p.herramientasSecs]; a.splice(i,1); return { ...p, herramientasSecs: a }; }), []);
+  const updateHerramientas = useCallback((i, u) => setFormData(p => {
+    const a = [...p.herramientasSecs]; a[i] = { ...a[i], ...u }; return { ...p, herramientasSecs: a };
+  }), []);
+  const setSinoHerr = useCallback((hi, categoria, item, val) => setFormData(p => {
+    const a = [...p.herramientasSecs];
+    a[hi] = { ...a[hi], [categoria]: { ...a[hi][categoria], [item]: val } };
+    return { ...p, herramientasSecs: a };
+  }), []);
+  const setComentHerr = useCallback((hi, categoria, item, val) => setFormData(p => {
+    const a = [...p.herramientasSecs];
+    const catKey = categoria + 'Comentarios';
+    a[hi] = { ...a[hi], [catKey]: { ...a[hi][catKey], [item]: val } };
+    return { ...p, herramientasSecs: a };
+  }), []);
+
+  return (
+    <FormContext.Provider value={{
+      formData, update, updateCoaching, resetForm, loadForm,
+      addCliente, removeCliente, updateCliente, toggleClientePasoVisita, toggleClientePasoBusqueda,
+      addSolicitud, removeSolicitud, updateSolicitud, toggleSolicitudPaso,
+      addHerramientas, removeHerramientas, updateHerramientas, setSinoHerr, setComentHerr,
+    }}>
+      {children}
+    </FormContext.Provider>
+  );
+}
+
+export function useForm() {
+  const ctx = useContext(FormContext);
+  if (!ctx) throw new Error('useForm debe usarse dentro de FormProvider');
+  return ctx;
+}

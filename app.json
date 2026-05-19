@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Supervisión GCC",
+    "slug": "supervision-gcc",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gcc.supervision"
+    },
+    "android": {
+      "package": "com.gcc.supervision",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Necesario para GPS blindado en visitas de campo."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Necesario para foto de evidencia en visitas de campo."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fbb676bc-2a16-40e8-8619-28374497f497"
+      }
+    }
+  }
+}
