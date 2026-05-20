@@ -4,10 +4,11 @@
     "slug": "supervision-gcc",
     "version": "2.0.0",
     "orientation": "portrait",
+    "scheme": "supervision-gcc",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.gif",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -31,7 +32,8 @@
         {
           "cameraPermission": "Necesario para foto de evidencia en visitas de campo."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "extra": {
       "eas": {

@@ -7,23 +7,28 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_PROYECTO.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  apiKey: "AIzaSyAfAFN7v1PTGDvChhhVT94b8xpb0VO92oY",
+  authDomain: "supervisionappgcc.firebaseapp.com",
+  projectId: "supervisionappgcc",
+  storageBucket: "supervisionappgcc.firebasestorage.app",
+  messagingSenderId: "154008057459",
+  appId: "1:154008057459:web:52b375f340abf478d0dc06"
 };
 
 let app;
 let db;
 
 try {
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  if (firebaseConfig.apiKey) {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    console.log('✅ Firebase inicializado correctamente');
+  } else {
+    console.warn('⚠️ Variables de entorno no encontradas. Firebase operará en modo local.');
+  }
 } catch (error) {
-  console.warn('Firebase no configurado — modo local activo');
+  console.error('❌ Error al inicializar Firebase:', error);
 }
 
 export { db };
-export const isFirebaseConfigured = firebaseConfig.apiKey !== 'TU_API_KEY';
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey);

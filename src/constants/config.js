@@ -6,16 +6,16 @@
 // ── 1. EMAIL VÍA GOOGLE APPS SCRIPT ──────────────────────────────────────────
 //  Igual que en tu HTML (const GAS_URL).
 //  Instrucciones en README.md → sección "Configurar Apps Script"
-export const GAS_URL = 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT';
+export const GAS_URL = process.env.EXPO_PUBLIC_GAS_URL || 'https://script.google.com/macros/s/AKfycbzYyiYnu91o-yQf2S9RsqpLfK_fFf0TQ6VNeJZMYWVDA8R3K_1QXx3xiu85oTanRmKU/exec';
 
 // Destinatario (se define también en el Apps Script, esto es referencia)
-export const JEFE_EMAIL   = 'jefe@tuempresa.com';
-export const JEFE_NOMBRE  = 'Nombre del Jefe';
+export const JEFE_EMAIL   = process.env.EXPO_PUBLIC_JEFE_EMAIL || 'sup.ac1.reg@gmail.com';
+export const JEFE_NOMBRE  = process.env.EXPO_PUBLIC_JEFE_NOMBRE || 'Miguel Angel Soriano Hernandez';
 
 // ── 2. GOOGLE DRIVE (para NotebookLM) ─────────────────────────────────────────
 export const GOOGLE_CONFIG = {
-  ANDROID_CLIENT_ID: 'TU_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-  WEB_CLIENT_ID:     'TU_WEB_CLIENT_ID.apps.googleusercontent.com',
+  ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID || 'TU_ANDROID_CLIENT_ID',
+  WEB_CLIENT_ID:     process.env.EXPO_PUBLIC_WEB_CLIENT_ID || 'TU_WEB_CLIENT_ID',
   ROOT_FOLDER_NAME:  'Supervisión GCC — NotebookLM',
 };
 

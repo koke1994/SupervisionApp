@@ -32,6 +32,13 @@ export const PASOS_SOLICITUD = [
   '9.- Hace recomendaciones en el uso correcto del crédito',
 ];
 
+export const RECOMENDACIONES_CREDITO = [
+  'Fechas y montos de pago',
+  'No prestar el crédito a terceros',
+  'Beneficios de pago puntual',
+  'Consecuencias de atraso'
+];
+
 export const HERR_NO_NEGOCIABLE_CHECK = ['Pax', 'Sim', 'Moto', 'Casco'];
 
 export const HERR_SEGURIDAD = [
@@ -75,7 +82,7 @@ export function createClienteDefault() {
 
 export function createSolicitudDefault() {
   return {
-    gerencia: 'Ixtapa Zihuatanejo', nombreCliente: '',
+    gerencia: '', nombreCliente: '',
     tipoSolicitud: '', contactabilidadCliente: false,
     contactabilidadLaboral: false, redContacto: false,
     pasos: Array(PASOS_SOLICITUD.length).fill(false),
@@ -119,7 +126,7 @@ export function createFormDefaults() {
   return {
     id: null, folio: generarFolio(), createdAt: null,
     tipoGestion: 'ACOMPAÑAMIENTO',
-    fecha: fechaStr, gerencia: 'Ixtapa Zihuatanejo',
+    fecha: fechaStr, gerencia: '',
     semana: '', gestor: '', lider: '',
     tareasRealizadas: '', cobrado: '', alcance: '',
     horaPrimeraGestion: '', herramientas: '', imagen: '',

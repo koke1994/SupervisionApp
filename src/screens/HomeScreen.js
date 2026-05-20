@@ -11,6 +11,10 @@ import { useForm } from '../context/FormContext';
 import { obtenerSupervisionesPorLider, obtenerTodasSupervisiones } from '../utils/firebaseService';
 import { isFirebaseConfigured } from '../../firebase';
 import { createFormDefaults } from '../constants/formDefaults';
+import * as Google from 'expo-auth-session/providers/google';
+import { GOOGLE_CONFIG } from '../constants/config';
+import { procesarRespuestaAuth, estaAutenticado } from '../utils/googleDriveService';
+import * as AuthSession from 'expo-auth-session';
 
 const LIDER_KEY = '@gcc_lider_nombre';
 
@@ -22,6 +26,35 @@ export default function HomeScreen({ navigation }) {
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [driveConnected, setDriveConnected] = useState(false);
+
+  // Configuración del login con Google
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: GOOGLE_CONFIG.ANDROID_CLIENT_ID,
+    webClientId: GOOGLE_CONFIG.WEB_CLIENT_ID, // Usado como respaldo en Expo Go
+    redirectUri: AuthSession.makeRedirectUri({ useProxy: true }),
+    scopes: [
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ],
+  });
+
+  useEffect(() => {
+    console.log("🗝️ ID de Android actual:", GOOGLE_CONFIG.ANDROID_CLIENT_ID);
+    console.log("🗝️ ID Web actual:", GOOGLE_CONFIG.WEB_CLIENT_ID);
+    estaAutenticado().then(setDriveConnected);
+  }, []);
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      procesarRespuestaAuth(response).then((success) => {
+        if (success) {
+          setDriveConnected(true);
+          Alert.alert('✅ Drive Conectado', 'Ya puedes respaldar tus historiales en la nube.');
+        }
+      });
+    }
+  }, [response]);
 
   // Cargar nombre líder guardado
   useEffect(() => {
@@ -65,10 +98,30 @@ export default function HomeScreen({ navigation }) {
     cargarHistorial();
   }
 
-  function nuevaSesion() {
-    resetForm();
-    updateFormData({ lider });
-    navigation.navigate('DatosGenerales');
+  async function nuevaSesion() {
+    const borrador = await AsyncStorage.getItem('@borrador_sesion');
+    if (borrador) {
+      Alert.alert(
+        'Borrador encontrado',
+        'Tienes una sesión incompleta guardada. ¿Deseas recuperarla o iniciar una nueva?',
+        [
+          { text: 'Iniciar Nueva', style: 'destructive', onPress: async () => {
+              await AsyncStorage.removeItem('@borrador_sesion');
+              resetForm();
+              updateFormData({ lider });
+              navigation.navigate('DatosGenerales');
+          }},
+          { text: 'Recuperar', style: 'default', onPress: () => {
+              loadForm(JSON.parse(borrador));
+              navigation.navigate('DatosGenerales');
+          }},
+        ]
+      );
+    } else {
+      resetForm();
+      updateFormData({ lider });
+      navigation.navigate('DatosGenerales');
+    }
   }
 
   function abrirSesion(sesion) {
@@ -121,6 +174,20 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.warnText}>  Firebase no configurado — modo local</Text>
         </View>
       )}
+
+      {/* Botón de Google Drive */}
+      <TouchableOpacity
+        style={[styles.warnBanner, { backgroundColor: driveConnected ? '#D5F5E3' : '#E8DAEF', marginTop: isFirebaseConfigured ? 0 : 2 }]}
+        onPress={() => {
+          if (!driveConnected) promptAsync();
+          else Alert.alert('Drive', 'Tu cuenta ya está conectada a Google Drive.');
+        }}
+      >
+        <Ionicons name="logo-google" size={14} color={driveConnected ? "#1E8449" : "#6C3483"} />
+        <Text style={[styles.warnText, { color: driveConnected ? '#1E8449' : '#6C3483', fontWeight: 'bold' }]}>
+          {driveConnected ? '  Google Drive Conectado' : '  Toca para conectar Google Drive'}
+        </Text>
+      </TouchableOpacity>
 
       {/* Header historial */}
       <View style={styles.listHeader}>

@@ -1,9 +1,13 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useForm } from '../context/FormContext';
 import { COLORS } from '../constants/colors';
 import { CLASIFICACIONES_GIC } from '../constants/formDefaults';
+import { Picker } from '@react-native-picker/picker';
+import { obtenerGerenciasUnicas, obtenerGestoresPorGerencia, obtenerLideresPorGerencia } from '../constants/empleados';
 import InputField from '../components/InputField';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import SectionHeader from '../components/SectionHeader';
 import ProgressBar from '../components/ProgressBar';
 
@@ -12,7 +16,56 @@ const TIPO_OPTIONS = ['ACOMPAÑAMIENTO', 'SUPERVISION'];
 export default function DatosGeneralesScreen({ navigation }) {
   const { formData, update } = useForm();
 
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
+
   const u = (field) => (val) => update({ [field]: val });
+
+  // Interceptar el botón de retroceso para evitar pérdida de datos
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Prevenir el comportamiento por defecto de ir hacia atrás
+      e.preventDefault();
+
+      Alert.alert(
+        '¿Deseas salir?',
+        'Toda la información capturada en esta sesión se perderá. ¿Estás seguro de que deseas regresar al inicio?',
+        [
+          { text: 'Quedarme', style: 'cancel', onPress: () => {} },
+          { text: 'Salir y perder datos', style: 'destructive', onPress: async () => {
+              await AsyncStorage.removeItem('@borrador_sesion');
+              navigation.dispatch(e.data.action);
+          }},
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const handleNext = () => {
+    if (!formData.gerencia || !formData.gestor || !formData.lider) {
+      Alert.alert('⚠️ Faltan datos', 'Por favor selecciona una Gerencia, un Líder y un Gestor antes de continuar.');
+      return;
+    }
+    
+    if (!formData.tareasRealizadas || !formData.cobrado || !formData.alcance) {
+      Alert.alert('⚠️ Faltan indicadores', 'Por favor ingresa las tareas realizadas, el monto cobrado y el porcentaje de alcance.');
+      return;
+    }
+
+    navigation.navigate('FormularioPrincipal');
+  };
+
+  const handleTimeChange = (event, selectedDate) => {
+    setShowTimePicker(false);
+    if (selectedDate) {
+      setTempDate(selectedDate);
+      const horas = selectedDate.getHours().toString().padStart(2, '0');
+      const mins = selectedDate.getMinutes().toString().padStart(2, '0');
+      update({ horaPrimeraGestion: `${horas}:${mins}` });
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -48,9 +101,52 @@ export default function DatosGeneralesScreen({ navigation }) {
             <InputField label="Fecha" value={formData.fecha} onChangeText={u('fecha')} style={styles.flex2} />
             <InputField label="Semana" value={formData.semana} onChangeText={u('semana')} placeholder="S14" style={styles.flex1} />
           </View>
-          <InputField label="Gerencia" value={formData.gerencia} onChangeText={u('gerencia')} />
-          <InputField label="Gestor" value={formData.gestor} onChangeText={u('gestor')} placeholder="Nombre completo" />
-          <InputField label="Líder" value={formData.lider} onChangeText={u('lider')} placeholder="Nombre completo" />
+
+          <View style={styles.pickerWrapper}>
+            <Text style={styles.pickerLabel}>Gerencia</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.gerencia}
+                onValueChange={(val) => {
+                  const newLideres = obtenerLideresPorGerencia(val);
+                  update({ 
+                    gerencia: val, 
+                    lider: newLideres.length === 1 ? newLideres[0] : '', 
+                    gestor: '' 
+                  });
+                }}
+              >
+                <Picker.Item label="Selecciona una gerencia..." value="" color={COLORS.gray} />
+                {obtenerGerenciasUnicas().map(g => (
+                  <Picker.Item key={g} label={g} value={g} color={COLORS.text} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.pickerWrapper}>
+            <Text style={styles.pickerLabel}>Líder</Text>
+            <View style={styles.pickerContainer}>
+              <Picker selectedValue={formData.lider} onValueChange={u('lider')} enabled={!!formData.gerencia}>
+                <Picker.Item label="Selecciona un líder..." value="" color={COLORS.gray} />
+                {obtenerLideresPorGerencia(formData.gerencia).map(l => (
+                  <Picker.Item key={l} label={l} value={l} color={COLORS.text} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.pickerWrapper}>
+            <Text style={styles.pickerLabel}>Gestor</Text>
+            <View style={styles.pickerContainer}>
+              <Picker selectedValue={formData.gestor} onValueChange={u('gestor')} enabled={!!formData.gerencia}>
+                <Picker.Item label="Selecciona un gestor..." value="" color={COLORS.gray} />
+                {obtenerGestoresPorGerencia(formData.gerencia).map(g => (
+                  <Picker.Item key={g} label={g} value={g} color={COLORS.text} />
+                ))}
+              </Picker>
+            </View>
+          </View>
         </View>
 
         {/* INDICADORES */}
@@ -62,11 +158,31 @@ export default function DatosGeneralesScreen({ navigation }) {
             <InputField label="Alcance %" value={formData.alcance} onChangeText={u('alcance')} keyboardType="numeric" style={styles.flex1} />
           </View>
           <View style={styles.rowFields}>
-            <InputField label="Hora 1ª gestión" value={formData.horaPrimeraGestion} onChangeText={u('horaPrimeraGestion')} placeholder="HH:MM" style={styles.flex1} />
+            <View style={styles.flex1}>
+              <Text style={styles.pickerLabel}>Hora 1ª gestión</Text>
+              <TouchableOpacity
+                style={[styles.pickerContainer, { paddingHorizontal: 14 }]}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={{ fontSize: 15, color: formData.horaPrimeraGestion ? COLORS.text : COLORS.gray }}>
+                  {formData.horaPrimeraGestion || 'HH:MM'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <InputField label="Herramientas" value={formData.herramientas} onChangeText={u('herramientas')} style={styles.flex1} />
             <InputField label="Imagen" value={formData.imagen} onChangeText={u('imagen')} style={styles.flex1} />
           </View>
         </View>
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={tempDate}
+            mode="time"
+            is24Hour={true}
+            display="spinner"
+            onChange={handleTimeChange}
+          />
+        )}
 
         {/* GIC */}
         <SectionHeader title="Clasificación GIC" />
@@ -86,7 +202,7 @@ export default function DatosGeneralesScreen({ navigation }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.btnNext} onPress={() => navigation.navigate('FormularioPrincipal')}>
+        <TouchableOpacity style={styles.btnNext} onPress={handleNext}>
           <Text style={styles.btnNextText}>Ir al Formulario →</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -119,6 +235,12 @@ const styles = StyleSheet.create({
   rowFields: { flexDirection: 'row', gap: 8 },
   flex1: { flex: 1 },
   flex2: { flex: 2 },
+  pickerWrapper: { marginBottom: 12 },
+  pickerLabel: { fontSize: 12, fontWeight: '600', color: COLORS.text, marginBottom: 4 },
+  pickerContainer: {
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 8,
+    backgroundColor: '#FAFAFA', overflow: 'hidden', height: 48, justifyContent: 'center'
+  },
   gicRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   gicBtn: {
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,

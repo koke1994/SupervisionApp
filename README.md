@@ -43,15 +43,8 @@ npx expo start
 ```javascript
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
-  const esReintento = data.esReintento || false;
-
-  const asunto = esReintento
-    ? `⚠ [DIFERIDO] Supervisión ${data.gestor} — S${data.semana}`
-    : `📋 Supervisión ${data.gestor} — S${data.semana} — ${data.fecha}`;
-
-  const cuerpo = esReintento
-    ? `Este reporte fue generado al momento de la supervisión pero no pudo enviarse por falta de señal. Se envía ahora que se restableció la conexión.\n\nGestor: ${data.gestor}\nLíder: ${data.lider}\nFecha: ${data.fecha}\nSemana: S${data.semana}`
-    : `Reporte de supervisión adjunto.\n\nGestor: ${data.gestor}\nLíder: ${data.lider}\nFecha: ${data.fecha}\nSemana: S${data.semana}`;
+  const asunto = data.asunto || "Reporte de Supervisión GCC";
+  const cuerpo = data.cuerpo || "Se adjunta el reporte de supervisión.";
 
   const blob = Utilities.newBlob(
     Utilities.base64Decode(data.pdf),
@@ -60,7 +53,7 @@ function doPost(e) {
   );
 
   GmailApp.sendEmail(
-    'CORREO_DEL_JEFE@empresa.com',   // ← Cambiar aquí
+    data.destinatario || 'correo_respaldo@empresa.com',
     asunto,
     cuerpo,
     { attachments: [blob], name: 'Sistema Supervisión GCC' }

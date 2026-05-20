@@ -1,10 +1,26 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createFormDefaults, createClienteDefault, createSolicitudDefault, createHerramientasDefault } from '../constants/formDefaults';
 
 const FormContext = createContext(null);
 
 export function FormProvider({ children }) {
   const [formData, setFormData] = useState(createFormDefaults());
+
+  // ── Autoguardado silencioso (Borrador) ────────────────────────────────────
+  useEffect(() => {
+    const guardarBorrador = async () => {
+      try {
+        await AsyncStorage.setItem('@borrador_sesion', JSON.stringify(formData));
+      } catch (e) {
+        console.warn('Error guardando borrador:', e);
+      }
+    };
+
+    if (formData && formData.folio) {
+      guardarBorrador();
+    }
+  }, [formData]);
 
   const update = useCallback((updates) => setFormData(p => ({ ...p, ...updates })), []);
   const updateCoaching = useCallback((u) => setFormData(p => ({ ...p, coaching: { ...p.coaching, ...u } })), []);
@@ -54,7 +70,7 @@ export function FormProvider({ children }) {
 
   return (
     <FormContext.Provider value={{
-      formData, update, updateCoaching, resetForm, loadForm,
+      formData, update, updateFormData: update, updateCoaching, resetForm, loadForm,
       addCliente, removeCliente, updateCliente, toggleClientePasoVisita, toggleClientePasoBusqueda,
       addSolicitud, removeSolicitud, updateSolicitud, toggleSolicitudPaso,
       addHerramientas, removeHerramientas, updateHerramientas, setSinoHerr, setComentHerr,

@@ -1,60 +1,104 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { View, Image, StyleSheet } from 'react-native';
 import { FormProvider } from './src/context/FormContext';
 import { COLORS } from './src/constants/colors';
 import { initDatabase } from './src/utils/localDB';
 import { iniciarMonitorRed } from './src/utils/networkMonitor';
 
-import HomeScreen                from './src/screens/HomeScreen';
-import DatosGeneralesScreen      from './src/screens/DatosGeneralesScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import DatosGeneralesScreen from './src/screens/DatosGeneralesScreen';
 import FormularioPrincipalScreen from './src/screens/FormularioPrincipalScreen';
-import CoachingScreen            from './src/screens/CoachingScreen';
-import ResumenScreen             from './src/screens/ResumenScreen';
+import CoachingScreen from './src/screens/CoachingScreen';
+import ResumenScreen from './src/screens/ResumenScreen';
 
 const Stack = createNativeStackNavigator();
 
 const NAV_OPTS = {
-  headerStyle: { backgroundColor: COLORS.primary },
-  headerTintColor: COLORS.gold,
-  headerTitleStyle: { fontWeight: '700', fontSize: 15 },
+    headerStyle: { backgroundColor: COLORS.primary },
+    headerTintColor: COLORS.gold,
+    headerTitleStyle: { fontWeight: '700', fontSize: 15 },
 };
 
 export default function App() {
-  useEffect(() => {
-    // Inicializar bóveda SQLite
-    initDatabase().catch(e => console.warn('DB init error:', e));
-    // Monitor de red para reintentar emails
-    const stop = iniciarMonitorRed();
-    return stop;
-  }, []);
+    const [appReady, setAppReady] = useState(false);
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <FormProvider>
-        <NavigationContainer>
-          <StatusBar style="light" backgroundColor={COLORS.primary} />
-          <Stack.Navigator initialRouteName="Home" screenOptions={NAV_OPTS}>
-            <Stack.Screen name="Home"
-              component={HomeScreen}
-              options={{ title: 'Supervisión GCC — Zihuatanejo' }} />
-            <Stack.Screen name="DatosGenerales"
-              component={DatosGeneralesScreen}
-              options={{ title: 'Datos Generales' }} />
-            <Stack.Screen name="FormularioPrincipal"
-              component={FormularioPrincipalScreen}
-              options={{ title: 'Formulario — Clientes / Solicitudes / Herramientas' }} />
-            <Stack.Screen name="Coaching"
-              component={CoachingScreen}
-              options={{ title: 'Coaching y Firmas' }} />
-            <Stack.Screen name="Resumen"
-              component={ResumenScreen}
-              options={{ title: 'Resumen y Bóveda', headerBackVisible: false }} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </FormProvider>
-    </GestureHandlerRootView>
-  );
+    useEffect(() => {
+        const setup = async () => {
+            try {
+                // Ejecuta la BD y el temporizador de 5 segundos al mismo tiempo
+                const dbPromise = initDatabase();
+                const timerPromise = new Promise(resolve => setTimeout(resolve, 5000));
+                
+                await Promise.all([dbPromise, timerPromise]);
+                console.log('✅ Base de datos inicializada correctamente');
+            } catch (error) {
+                console.error('❌ Error crítico inicializando DB:', error);
+            } finally {
+                setAppReady(true);
+            }
+        };
+        setup();
+
+        const stop = iniciarMonitorRed();
+        return stop;
+    }, []);
+
+    // Mostrar splash animado (GIF)
+    if (!appReady) {
+        return (
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <View style={styles.splashContainer}>
+                    <Image 
+                        source={require('./assets/splash.gif')} 
+                        style={styles.splashImage}
+                        resizeMode="cover"
+                    />
+                </View>
+            </GestureHandlerRootView>
+        );
+    }
+
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <FormProvider>
+                <NavigationContainer>
+                    <StatusBar style="light" backgroundColor={COLORS.primary} />
+                    <Stack.Navigator initialRouteName="Home" screenOptions={NAV_OPTS}>
+                        <Stack.Screen name="Home"
+                            component={HomeScreen}
+                            options={{ title: 'Supervisión GCC — Zihuatanejo' }} />
+                        <Stack.Screen name="DatosGenerales"
+                            component={DatosGeneralesScreen}
+                            options={{ title: 'Datos Generales' }} />
+                        <Stack.Screen name="FormularioPrincipal"
+                            component={FormularioPrincipalScreen}
+                            options={{ title: 'Formulario — Clientes / Solicitudes / Herramientas' }} />
+                        <Stack.Screen name="Coaching"
+                            component={CoachingScreen}
+                            options={{ title: 'Coaching y Firmas' }} />
+                        <Stack.Screen name="Resumen"
+                            component={ResumenScreen}
+                            options={{ title: 'Resumen y Bóveda', headerBackVisible: false }} />
+                    </Stack.Navigator>
+                </NavigationContainer>
+            </FormProvider>
+        </GestureHandlerRootView>
+    );
 }
+
+const styles = StyleSheet.create({
+    splashContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: COLORS.primary // Mantiene el fondo azul oscuro corporativo
+    },
+    splashImage: {
+        width: '100%',
+        height: '100%',
+    }
+});

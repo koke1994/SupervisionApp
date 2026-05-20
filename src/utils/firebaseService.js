@@ -17,14 +17,19 @@ const COLLECTION = 'supervisiones';
 export async function guardarSupervision(formData) {
   if (!isFirebaseConfigured) throw new Error('Firebase no configurado');
 
-  const payload = {
-    ...formData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
+  try {
+    const payload = {
+      ...formData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
 
-  const docRef = await addDoc(collection(db, COLLECTION), payload);
-  return docRef.id;
+    const docRef = await addDoc(collection(db, COLLECTION), payload);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error guardando supervisión en Firestore:', error);
+    throw error;
+  }
 }
 
 // ── Actualizar supervisión existente ──────────────────────────────────────────
