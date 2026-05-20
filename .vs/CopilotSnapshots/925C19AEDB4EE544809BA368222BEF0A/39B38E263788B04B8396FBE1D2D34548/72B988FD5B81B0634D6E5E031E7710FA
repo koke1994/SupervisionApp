@@ -1,0 +1,71 @@
+﻿import {
+  collection,
+  addDoc,
+  updateDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  doc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { db, isFirebaseConfigured } from '../../firebase';
+
+const COLLECTION = 'supervisiones';
+
+// ── Guardar nueva supervisión ─────────────────────────────────────────────────
+export async function guardarSupervision(formData) {
+  if (!isFirebaseConfigured) throw new Error('Firebase no configurado');
+
+  const payload = {
+    ...formData,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  const docRef = await addDoc(collection(db, COLLECTION), payload);
+  return docRef.id;
+}
+
+// ── Actualizar supervisión existente ──────────────────────────────────────────
+export async function actualizarSupervision(id, formData) {
+  if (!isFirebaseConfigured) throw new Error('Firebase no configurado');
+
+  const ref = doc(db, COLLECTION, id);
+  await updateDoc(ref, {
+    ...formData,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ── Obtener supervisiones de un líder ─────────────────────────────────────────
+export async function obtenerSupervisionesPorLider(lider) {
+  if (!isFirebaseConfigured) return [];
+
+  const q = query(
+    collection(db, COLLECTION),
+    where('lider', '==', lider),
+    orderBy('createdAt', 'desc')
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+    // Convertir Timestamp a string legible
+    createdAt: d.data().createdAt?.toDate().toLocaleDateString('es-MX') ?? '',
+  }));
+}
+
+// ── Obtener todas las supervisiones ──────────────────────────────────────────
+export async function obtenerTodasSupervisiones() {
+  if (!isFirebaseConfigured) return [];
+
+  const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+    createdAt: d.data().createdAt?.toDate().toLocaleDateString('es-MX') ?? '',
+  }));
+}

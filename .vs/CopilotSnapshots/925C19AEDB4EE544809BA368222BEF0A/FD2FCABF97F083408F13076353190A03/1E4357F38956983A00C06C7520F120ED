@@ -1,0 +1,300 @@
+﻿import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import {
+    PASOS_VISITA,
+    ACCIONES_ADICIONALES,
+    PASOS_SOLICITUD,
+    RECOMENDACIONES_CREDITO,
+} from '../constants/formDefaults';
+
+const check = (val) => (val ? '&#10003;' : '&#9744;');
+const siNo = (val) => {
+    if (val === 'si') return '<span style="color:#17A589;font-weight:bold;">SÍ</span>';
+    if (val === 'no') return '<span style="color:#E74C3C;font-weight:bold;">NO</span>';
+    return '<span style="color:#BDC3C7;">—</span>';
+};
+
+function clienteSection(c, num) {
+    const pasos = c.pasos || [];
+    const accionesAdicionales = c.accionesAdicionales || [];
+    const caminoCobrarMejor = c.caminoCobrarMejor || false;
+    const tresPasosBusqueda = c.tresPasosBusqueda || false;
+
+    const pasosHTML = (PASOS_VISITA || []).map((p, i) => `
+    <span style="margin-right:12px;">${check(pasos[i])} ${p}</span>
+  `).join('');
+
+    const accionesHTML = (ACCIONES_ADICIONALES || []).map((a, i) => `
+    <span style="margin-right:12px;">${check(accionesAdicionales[i])} ${a}</span>
+  `).join('');
+
+    return `
+  <div style="border:1.5px solid #1A3A5C;border-radius:8px;margin-bottom:14px;overflow:hidden;">
+    <div style="background:#1A3A5C;color:#F0C040;padding:7px 14px;font-weight:bold;font-size:13px;">
+      Cliente ${num}
+    </div>
+    <div style="padding:10px 14px;">
+      <table style="width:100%;margin-bottom:8px;font-size:12px;">
+        <tr>
+          <td><b>Nombre:</b> ${c.nombre || '___________________________________________'}</td>
+        </tr>
+        <tr>
+          <td style="padding-top:4px;">
+            <b>Semanas:</b> ${c.semanas || '____'} &nbsp;&nbsp;
+            <b>Saldo:</b> $${c.saldo || '________'} &nbsp;&nbsp;
+            <b>Pago sugerido:</b> $${c.pagoSugerido || '________'} &nbsp;&nbsp;
+            <b>Alternativas:</b> ${c.alternativas || '________'}
+          </td>
+        </tr>
+      </table>
+
+      <div style="margin-bottom:8px;font-size:12px;">
+        <b>Atendió:</b> &nbsp;
+        ${check(c.atiende === 'cliente')} Cliente &nbsp;&nbsp;
+        ${check(c.atiende === 'familiar')} Familiar
+      </div>
+
+      <div style="font-size:11.5px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;">
+        ${pasosHTML}
+      </div>
+
+      <div style="margin-bottom:8px;font-size:11px;color:#444;">
+        <b>Observaciones:</b> ${c.observaciones || ''}
+        <div style="border-bottom:1px solid #D5D8DC;margin-top:4px;height:30px;"></div>
+        <div style="border-bottom:1px solid #D5D8DC;margin-top:4px;height:30px;"></div>
+      </div>
+
+      <div style="font-size:11px;display:flex;flex-wrap:wrap;gap:4px;">
+        <b>Acciones:</b> &nbsp;
+        ${accionesHTML}
+      </div>
+
+      <div style="font-size:11px;margin-top:6px;">
+        ${check(caminoCobrarMejor)} <i>Camino para cobrar mejor</i> &nbsp;&nbsp;
+        ${check(tresPasosBusqueda)} <i>3 Pasos de búsqueda de cliente</i>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+export function buildHtml(formData) {
+    if (!formData) {
+        throw new Error('No hay datos para generar el PDF');
+    }
+
+    const clientes = formData.clientes || [];
+    const solicitudes = formData.solicitudes || [];
+    const solicitud = solicitudes[0] || {}; // Tomar la primera solicitud
+    const retro = formData.coaching || {};
+
+    clientes.forEach((c, i) => {
+        if (!c.pasos) c.pasos = [];
+        if (!c.accionesAdicionales) c.accionesAdicionales = [];
+    });
+
+    const clasificacionLabels = {
+        top: 'Top', satisfactorio: 'Satisfactorio',
+        medioAlto: 'Medio Alto', medioBajo: 'Medio Bajo', bottom: 'Bottom',
+    };
+
+    const gicRow = ['top', 'satisfactorio', 'medioAlto', 'medioBajo', 'bottom'].map(v =>
+        `${check(formData.clasificacionGIC === v)} ${clasificacionLabels[v]}`
+    ).join(' &nbsp; ');
+
+    const pasosolicitudHTML = (PASOS_SOLICITUD || []).map((p, i) => `
+    <div style="margin-bottom:3px;">${check(solicitud.pasos?.[i])} ${p}</div>
+  `).join('');
+
+    const recHTML = (RECOMENDACIONES_CREDITO || []).map((r, i) => `
+    <div style="font-size:10.5px;margin-bottom:2px;">${check(solicitud.recomendaciones?.[i])} ${r}</div>
+  `).join('');
+
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    @page { size: A4; margin: 12mm 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Calibri, Arial, sans-serif; font-size: 12px; color: #2C3E50; }
+    .page { max-width: 750px; margin: 0 auto; }
+    .header { background: #0D1B2A; color: #F0C040; padding: 12px 16px; border-radius: 6px; margin-bottom: 12px; }
+    .header h1 { font-size: 16px; letter-spacing: 1px; text-transform: uppercase; }
+    .header .sub { font-size: 11px; color: #BDC3C7; margin-top: 3px; }
+    .card { border: 1px solid #D5D8DC; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; }
+    .section-title { font-size: 11px; font-weight: bold; color: #1A3A5C; text-transform: uppercase;
+                     letter-spacing: 0.5px; border-bottom: 2px solid #F0C040; padding-bottom: 3px; margin-bottom: 8px; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; font-size: 12px; }
+    .field { display: flex; gap: 4px; }
+    .field b { white-space: nowrap; }
+    .semaforo { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px;
+                font-weight: bold; color: white; }
+    .tipo-badge { background: #1A3A5C; color: #F0C040; padding: 3px 10px; border-radius: 4px;
+                  font-size: 11px; font-weight: bold; display: inline-block; margin-left: 8px; }
+    .firma-box { border-top: 1.5px solid #2C3E50; margin-top: 8px; padding-top: 4px;
+                 text-align: center; font-size: 11px; color: #7F8C8D; }
+    .page-break { page-break-before: always; margin-top: 20px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ENCABEZADO -->
+  <div class="header">
+    <h1>Supervisión y Acompañamiento — División Cobranza</h1>
+    <div class="sub">Región Acapulco Costas 1 &nbsp;·&nbsp; GCC Zihuatanejo, Guerrero</div>
+  </div>
+
+  <!-- DATOS GENERALES -->
+  <div class="card">
+    <div class="section-title">Datos Generales</div>
+    <div class="row">
+      <div class="field"><b>Fecha:</b> ${formData.fecha}</div>
+      <div class="field"><b>Semana:</b> ${formData.semana}</div>
+      <div class="field"><b>Gerencia:</b> ${formData.gerencia}</div>
+    </div>
+    <div class="row">
+      <div class="field"><b>Gestor:</b> ${formData.gestor}</div>
+      <div class="field"><b>Líder:</b> ${formData.lider}</div>
+    </div>
+    <div class="row">
+      <div class="field"><b>Tareas realizadas:</b> ${formData.tareasRealizadas}</div>
+      <div class="field"><b>Cobrado:</b> $${formData.cobrado}</div>
+      <div class="field"><b>Alcance:</b> ${formData.alcance}%</div>
+    </div>
+    <div class="row">
+      <div class="field"><b>Hora 1ª gestión:</b> ${formData.horaPrimeraGestion}</div>
+      <div class="field"><b>Herramientas:</b> ${siNo(formData.herramientas)}</div>
+      <div class="field"><b>Imagen:</b> ${siNo(formData.imagen)}</div>
+    </div>
+    <div class="row" style="margin-top:4px;">
+      <div class="field"><b>¿Conoce mandato y funciones?</b> ${siNo(formData.conoceMandato)}</div>
+      <div class="field"><b>¿Conoce compensación?</b> ${siNo(formData.conoceCompensacion)}</div>
+      <div class="field"><b>¿Conexión rápida?</b> ${siNo(formData.conexionRapida)}</div>
+      <div class="field"><b>Registra en ZEUS:</b> ${siNo(formData.registraZeus)}</div>
+    </div>
+    <div class="row" style="margin-top:4px;align-items:center;">
+      <div class="field"><b>GIC:</b> &nbsp;${gicRow}</div>
+      <div class="field">
+        <b>Tipo:</b>
+        <span class="tipo-badge">
+          ${formData.tipoVisita === 'acompanamiento' ? 'ACOMPAÑAMIENTO' : formData.tipoVisita === 'supervision' ? 'SUPERVISIÓN' : '—'}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTES -->
+  <div class="section-title" style="margin-bottom:8px;">Clientes Visitados</div>
+  ${clientes.map((c, i) => clienteSection(c, i + 1)).join('')}
+
+  <!-- PÁGINA 2 -->
+  <div class="page-break"></div>
+
+  <!-- SOLICITUDES -->
+  <div class="card" style="margin-top:10px;">
+    <div class="section-title">Solicitudes</div>
+    <div class="row" style="margin-bottom:6px;">
+      <div class="field"><b>Cliente:</b> ${solicitud.nombreCliente}</div>
+      <div class="field"><b>Tipo de solicitud:</b> ${solicitud.tipoSolicitud}</div>
+    </div>
+    <div style="font-size:11.5px;margin-bottom:8px;">
+      ${check(solicitud.contactabilidadCliente)} Contactabilidad del Cliente &nbsp;&nbsp;
+      ${check(solicitud.contactabilidadLaboral)} Contactabilidad Laboral &nbsp;&nbsp;
+      ${check(solicitud.redContacto)} Red de contacto ampliada
+    </div>
+    <div style="font-size:11.5px;margin-bottom:8px;">${pasosolicitudHTML}</div>
+    <div style="background:#F0F4F8;border-radius:6px;padding:8px;font-size:10.5px;">
+      <b>Recomendaciones en uso del crédito:</b><br/>${recHTML}
+    </div>
+  </div>
+
+  <!-- RETROALIMENTACIÓN -->
+  <div class="card">
+    <div class="section-title">Retroalimentación y Coaching del Líder</div>
+    <table style="width:100%;font-size:11.5px;">
+      <tr>
+        <td style="width:33%;vertical-align:top;padding-right:8px;">
+          <b>Qué está haciendo bien:</b> <i>(llenado por líder)</i>
+          <div style="border:1px solid #D5D8DC;border-radius:4px;padding:6px;margin-top:4px;min-height:70px;color:#2C3E50;">
+            ${retro.haceBien || ''}
+          </div>
+        </td>
+        <td style="width:33%;vertical-align:top;padding-right:8px;">
+          <b>Qué puede mejorar:</b> <i>(llenado por líder)</i>
+          <div style="border:1px solid #D5D8DC;border-radius:4px;padding:6px;margin-top:4px;min-height:70px;color:#2C3E50;">
+            ${retro.puedeMejorar || ''}
+          </div>
+        </td>
+        <td style="width:33%;vertical-align:top;">
+          <b>Compromisos del gestor:</b>
+          <div style="border:1px solid #D5D8DC;border-radius:4px;padding:6px;margin-top:4px;min-height:70px;color:#2C3E50;">
+            ${retro.compromisos || ''}
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Firmas -->
+    <div style="display:flex;gap:16px;margin-top:20px;">
+      <div style="flex:1;text-align:center;">
+        <div style="border-top:1.5px solid #2C3E50;padding-top:6px;font-size:11px;color:#7F8C8D;">
+          <b>${retro.firmaGestor || 'Nombre del Gestor'}</b><br/>Gestor
+        </div>
+      </div>
+      <div style="flex:1;text-align:center;">
+        <div style="border-top:1.5px solid #2C3E50;padding-top:6px;font-size:11px;color:#7F8C8D;">
+          <b>${retro.firmaLider || 'Nombre del Líder'}</b><br/>Líder
+        </div>
+      </div>
+      <div style="flex:1;text-align:center;">
+        <div style="border-top:1.5px solid #2C3E50;padding-top:6px;font-size:11px;color:#7F8C8D;">
+          <b>${retro.firmaRegional || 'Nombre del Regional'}</b><br/>Regional
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align:center;margin-top:12px;font-size:9px;color:#BDC3C7;border-top:1px solid #D5D8DC;padding-top:6px;">
+    División Cobranza Metro Sur · Región Acapulco Costas 1 · GCC Zihuatanejo
+    &nbsp;|&nbsp; Generado: ${new Date().toLocaleString('es-MX')}
+    <br/>
+    <i>El buen comportamiento sin resultados NO es desempeño aceptable.</i>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+export async function generarYCompartirPDF(formData) {
+    if (!formData) {
+        throw new Error('No hay datos para generar el PDF');
+    }
+
+    const datosCorregidos = { ...formData };
+    datosCorregidos.clientes = (datosCorregidos.clientes || []).map(c => ({
+        ...c,
+        pasos: c.pasos || [],
+        accionesAdicionales: c.accionesAdicionales || [],
+    }));
+
+    const html = buildHtml(datosCorregidos);
+    const { uri } = await Print.printToFileAsync({ html, base64: false });
+    const filename = `Supervision_${formData.gestor.replace(/\s/g, '_') || 'GCC'}_${formData.fecha.replace(/\//g, '-')}.pdf`;
+
+    const newUri = uri.replace(/[^/]+$/, filename);
+    const FileSystem = require('expo-file-system');
+    await FileSystem.moveAsync({ from: uri, to: newUri });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+        await Sharing.shareAsync(newUri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Guardar o compartir PDF',
+        });
+    }
+    return newUri;
+}

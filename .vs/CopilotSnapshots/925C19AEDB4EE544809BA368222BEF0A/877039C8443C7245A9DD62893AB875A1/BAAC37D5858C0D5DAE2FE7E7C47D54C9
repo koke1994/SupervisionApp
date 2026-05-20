@@ -1,0 +1,84 @@
+﻿import React, { useEffect, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { View, ActivityIndicator } from 'react-native';
+import { FormProvider } from './src/context/FormContext';
+import { COLORS } from './src/constants/colors';
+import { initDatabase } from './src/utils/localDB';
+import { iniciarMonitorRed } from './src/utils/networkMonitor';
+
+import HomeScreen from './src/screens/HomeScreen';
+import DatosGeneralesScreen from './src/screens/DatosGeneralesScreen';
+import FormularioPrincipalScreen from './src/screens/FormularioPrincipalScreen';
+import CoachingScreen from './src/screens/CoachingScreen';
+import ResumenScreen from './src/screens/ResumenScreen';
+
+const Stack = createNativeStackNavigator();
+
+const NAV_OPTS = {
+    headerStyle: { backgroundColor: COLORS.primary },
+    headerTintColor: COLORS.gold,
+    headerTitleStyle: { fontWeight: '700', fontSize: 15 },
+};
+
+export default function App() {
+    const [dbReady, setDbReady] = useState(false);
+
+    useEffect(() => {
+        const setup = async () => {
+            try {
+                await initDatabase();
+                setDbReady(true);
+                console.log('✅ Base de datos inicializada correctamente');
+            } catch (error) {
+                console.error('❌ Error crítico inicializando DB:', error);
+                // Aún así, marca como listo para no quedarse en loading infinito
+                setDbReady(true);
+            }
+        };
+        setup();
+
+        const stop = iniciarMonitorRed();
+        return stop;
+    }, []);
+
+    // Mostrar splash mientras DB se inicializa
+    if (!dbReady) {
+        return (
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primary }}>
+                    <ActivityIndicator size="large" color={COLORS.gold} />
+                </View>
+            </GestureHandlerRootView>
+        );
+    }
+
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <FormProvider>
+                <NavigationContainer>
+                    <StatusBar style="light" backgroundColor={COLORS.primary} />
+                    <Stack.Navigator initialRouteName="Home" screenOptions={NAV_OPTS}>
+                        <Stack.Screen name="Home"
+                            component={HomeScreen}
+                            options={{ title: 'Supervisión GCC — Zihuatanejo' }} />
+                        <Stack.Screen name="DatosGenerales"
+                            component={DatosGeneralesScreen}
+                            options={{ title: 'Datos Generales' }} />
+                        <Stack.Screen name="FormularioPrincipal"
+                            component={FormularioPrincipalScreen}
+                            options={{ title: 'Formulario — Clientes / Solicitudes / Herramientas' }} />
+                        <Stack.Screen name="Coaching"
+                            component={CoachingScreen}
+                            options={{ title: 'Coaching y Firmas' }} />
+                        <Stack.Screen name="Resumen"
+                            component={ResumenScreen}
+                            options={{ title: 'Resumen y Bóveda', headerBackVisible: false }} />
+                    </Stack.Navigator>
+                </NavigationContainer>
+            </FormProvider>
+        </GestureHandlerRootView>
+    );
+}

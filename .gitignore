@@ -1,6 +1,21 @@
+# Node.js
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo
 .expo/
-.vs/
-android/
-ios/
-package-lock.json
+dist/
+
+# Build artifacts
+*.apk
+*.aab
+*.ipa
+
+# Environment variables
+.env
+
+# IDE config
+.idea/
+.vscode/
